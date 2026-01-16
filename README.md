@@ -1,36 +1,41 @@
 # InertiaThemes
 
-A theming system for Laravel/Inertia applications with auto-discovery, lazy loading, and SSR support.
+A theming system for Laravel/Inertia apps. Works with Vue, React, and Svelte.
 
-## Features
-
-- **Auto-discovery** - Themes and blocks are automatically found in `app/Themes` and `app/Blocks`
-- **Lazy loading** - Only the active theme is loaded, not all themes
-- **SSR compatible** - Works seamlessly with Inertia SSR
-- **Block system** - Define reusable blocks with schemas for page builders
-
-## Installation
+## Install
 
 ```bash
 composer require inertiathemes/inertiathemes
 ```
 
-Publish the config (optional):
+Publish the component for your framework:
 
 ```bash
-php artisan vendor:publish --tag=inertiathemes-config
+# Vue
+php artisan vendor:publish --tag=inertiathemes-vue
+
+# React
+php artisan vendor:publish --tag=inertiathemes-react
+
+# Svelte
+php artisan vendor:publish --tag=inertiathemes-svelte
 ```
+
+## How It Works
+
+1. You create **themes** (PHP classes with colors and settings)
+2. You create **blocks** (PHP classes that define content schemas)
+3. You create **block components** (Vue/React/Svelte files in theme folders)
+4. Use the `<Blocks>` component to render them
+
+The active theme determines which components get rendered.
 
 ## Quick Start
 
 ### 1. Create a Theme
 
-Create a file in `app/Themes/`:
-
 ```php
-<?php
 // app/Themes/DefaultTheme.php
-
 namespace App\Themes;
 
 use InertiaThemes\BaseTheme;
@@ -49,179 +54,241 @@ class DefaultTheme extends BaseTheme
         return [
             'primary' => '#3B82F6',
             'secondary' => '#1F2937',
-            'background' => '#FFFFFF',
         ];
-    }
-
-    public function defaultBlocks(): array
-    {
-        return ['header', 'hero', 'footer'];
-    }
-
-    public function defaultContent(string $blockType): array
-    {
-        return match($blockType) {
-            'hero' => [
-                'headline' => 'Welcome',
-                'ctaText' => 'Get Started',
-            ],
-            default => [],
-        };
     }
 }
 ```
 
-That's it! The theme is automatically discovered.
-
 ### 2. Create a Block
 
-Create a file in `app/Blocks/`:
-
 ```php
-<?php
 // app/Blocks/HeroBlock.php
-
 namespace App\Blocks;
 
 use InertiaThemes\BaseBlock;
 
 class HeroBlock extends BaseBlock
 {
-    protected string $type = 'hero';
-    protected string $name = 'Hero';
+    protected string $type = 'Hero';
+    protected string $name = 'Hero Section';
     protected string $category = 'Content';
-    protected string $component = 'Blocks/HeroBlock';
+    protected string $component = 'Hero';
 
     public function contentSchema(): array
     {
         return [
             'headline' => ['type' => 'text', 'label' => 'Headline'],
-            'image' => ['type' => 'image', 'label' => 'Background'],
+            'subheadline' => ['type' => 'textarea', 'label' => 'Subheadline'],
         ];
     }
 
     public function defaultContent(): array
     {
         return [
-            'headline' => 'Welcome to our site',
+            'headline' => 'Welcome',
+            'subheadline' => 'This is the subheadline',
         ];
     }
 }
 ```
 
-### 3. Use in Routes
+### 3. Create Block Components
 
-Apply the theme middleware to routes that need theming:
+Put your components in theme folders:
+
+```
+resources/js/themes/
+  default/
+    blocks/
+      Hero.vue
+      Footer.vue
+  modern/
+    blocks/
+      Hero.vue
+      Footer.vue
+```
+
+Example Vue component:
+
+```vue
+<!-- resources/js/themes/default/blocks/Hero.vue -->
+<script setup>
+defineProps({
+    content: Object,
+    settings: Object,
+})
+</script>
+
+<template>
+    <section class="hero">
+        <h1>{{ content.headline }}</h1>
+        <p>{{ content.subheadline }}</p>
+    </section>
+</template>
+```
+
+### 4. Set Up Routes
+
+Use the theme middleware:
 
 ```php
 // routes/web.php
-use App\Http\Middleware\SetOrganizationTheme;
-
-// Frontend routes - loads theme from org settings
-Route::middleware(SetOrganizationTheme::class)->group(function () {
-    Route::get('/', [SiteController::class, 'home']);
-});
-
-// Admin routes - no theme loaded automatically
-Route::middleware('auth')->prefix('admin')->group(function () {
-    Route::get('site-builder', [SiteBuilderController::class, 'index']);
+Route::middleware('theme:default')->group(function () {
+    Route::get('/', [PageController::class, 'home']);
 });
 ```
 
-Create your custom middleware:
+Or create custom middleware to resolve theme dynamically:
 
 ```php
-<?php
 // app/Http/Middleware/SetOrganizationTheme.php
-
 namespace App\Http\Middleware;
 
-use App\Models\Organization;
-use Illuminate\Http\Request;
 use InertiaThemes\Middleware\SetTheme;
+use Illuminate\Http\Request;
 
 class SetOrganizationTheme extends SetTheme
 {
     protected function resolveFromRequest(Request $request): ?string
     {
-        return Organization::first()?->settings['theme_slug'];
+        // Return theme ID from database, session, etc.
+        return $request->user()?->organization?->theme_id;
     }
 }
 ```
 
-### 4. Use in Controllers
+### 5. Pass Blocks from Controller
 
 ```php
-use InertiaThemes\Facades\Theme;
-use InertiaThemes\Facades\Blocks;
+use Inertia\Inertia;
 
-class SiteBuilderController extends Controller
+class PageController extends Controller
 {
-    public function index()
+    public function home()
     {
-        return Inertia::render('Admin/SiteBuilder/Index', [
-            'themes' => Theme::list(),     // Load all themes for picker
-            'blocks' => Blocks::list(),    // All block definitions
+        return Inertia::render('Home', [
+            'blocks' => [
+                [
+                    'id' => 'block-1',
+                    'type' => 'Hero',
+                    'area' => 'content',
+                    'content' => ['headline' => 'Hello', 'subheadline' => 'World'],
+                    'settings' => [],
+                ],
+            ],
         ]);
     }
 }
 ```
 
-### 5. Use in Vue
-
-The theme is automatically shared when using the middleware:
+### 6. Render Blocks
 
 ```vue
 <script setup>
-import { usePage } from '@inertiajs/vue3'
-
-const theme = usePage().props.theme
+import Blocks from '@/Components/Blocks.vue'
 </script>
 
 <template>
-    <div :style="{ backgroundColor: theme.colors.primary }">
-        {{ theme.name }}
-    </div>
+    <Blocks />
 </template>
 ```
+
+That's it. The `<Blocks>` component automatically:
+- Reads the theme from Inertia shared props
+- Reads the blocks from page props
+- Renders the right component for each block based on the active theme
+
+## Block Placement (Areas)
+
+Use the `area` prop to render blocks in specific sections:
+
+```vue
+<template>
+    <header>
+        <Blocks area="header" />
+    </header>
+
+    <main>
+        <Blocks area="content" />
+    </main>
+
+    <footer>
+        <Blocks area="footer" />
+    </footer>
+</template>
+```
+
+Blocks are filtered by their `area` property. Without the `area` prop, all blocks render.
+
+## Theme Fallbacks
+
+Components are resolved in this order:
+
+1. `themes/{current-theme}/blocks/{BlockType}.vue`
+2. `themes/_base/blocks/{BlockType}.vue`
+3. `themes/default/blocks/{BlockType}.vue`
+
+Use `_base` for shared components, theme folders for overrides.
 
 ## API Reference
 
 ### Theme Facade
 
 ```php
-Theme::use('theme-id');        // Set current theme (lazy loads it)
-Theme::current();              // Get current theme instance
-Theme::get('theme-id');        // Get specific theme (lazy loads it)
-Theme::registered();           // Get all registered theme IDs (no loading)
-Theme::list();                 // Get all themes as array (loads all)
+use InertiaThemes\Facades\Theme;
+
+Theme::use('theme-id');        // Set current theme
+Theme::current();              // Get current theme
+Theme::get('theme-id');        // Get specific theme
+Theme::list();                 // Get all themes
 Theme::has('theme-id');        // Check if theme exists
 ```
 
 ### Blocks Facade
 
 ```php
-Blocks::list();                // All blocks as array
-Blocks::byCategory();          // Blocks grouped by category
+use InertiaThemes\Facades\Blocks;
+
+Blocks::list();                // All blocks
 Blocks::get('hero');           // Get specific block
-Blocks::defaultContent('hero'); // Get block's default content
+Blocks::byCategory();          // Blocks grouped by category
 Blocks::has('hero');           // Check if block exists
 ```
 
-### Manual Registration
+### useTheme Composable (Vue)
 
-If you prefer not to use auto-discovery:
+```vue
+<script setup>
+import { useTheme } from '@/composables/useTheme'
+
+const { theme, themeId, colors, themeStyles } = useTheme()
+</script>
+
+<template>
+    <div :style="themeStyles">
+        Current theme: {{ themeId }}
+    </div>
+</template>
+```
+
+## Config
+
+Publish the config file:
+
+```bash
+php artisan vendor:publish --tag=inertiathemes-config
+```
 
 ```php
 // config/inertiathemes.php
-'auto_discover' => false,
-
-// AppServiceProvider.php
-public function boot()
-{
-    Theme::registerClass(MyTheme::class);
-    Blocks::register(MyBlock::class);
-}
+return [
+    'default' => 'default',
+    'auto_discover' => true,
+    'paths' => [
+        'themes' => app_path('Themes'),
+        'blocks' => app_path('Blocks'),
+    ],
+];
 ```
 
 ## License

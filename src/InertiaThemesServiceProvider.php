@@ -53,10 +53,21 @@ class InertiaThemesServiceProvider extends ServiceProvider
             __DIR__ . '/../config/inertiathemes.php' => config_path('inertiathemes.php'),
         ], 'inertiathemes-config');
 
-        // Publish Vue composables
+        // Publish Vue Blocks component
         $this->publishes([
-            __DIR__ . '/../resources/js' => resource_path('js/vendor/inertiathemes'),
-        ], 'inertiathemes-assets');
+            __DIR__ . '/../resources/js/vue/Blocks.vue' => resource_path('js/Components/Blocks.vue'),
+            __DIR__ . '/../resources/js/composables/useTheme.js' => resource_path('js/composables/useTheme.js'),
+        ], 'inertiathemes-vue');
+
+        // Publish React Blocks component
+        $this->publishes([
+            __DIR__ . '/../resources/js/react/Blocks.jsx' => resource_path('js/Components/Blocks.jsx'),
+        ], 'inertiathemes-react');
+
+        // Publish Svelte Blocks component
+        $this->publishes([
+            __DIR__ . '/../resources/js/svelte/Blocks.svelte' => resource_path('js/Components/Blocks.svelte'),
+        ], 'inertiathemes-svelte');
 
         // Register middleware alias
         $this->app['router']->aliasMiddleware('theme', Middleware\SetTheme::class);
