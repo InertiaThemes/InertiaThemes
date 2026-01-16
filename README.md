@@ -34,8 +34,13 @@ The active theme determines which components get rendered.
 
 ### 1. Create a Theme
 
+```bash
+php artisan make:theme Default
+```
+
+This creates `app/Themes/DefaultTheme.php`:
+
 ```php
-// app/Themes/DefaultTheme.php
 namespace App\Themes;
 
 use InertiaThemes\BaseTheme;
@@ -46,7 +51,7 @@ class DefaultTheme extends BaseTheme
 
     public function name(): string
     {
-        return 'Default Theme';
+        return 'Default';
     }
 
     public function colors(): array
@@ -54,6 +59,7 @@ class DefaultTheme extends BaseTheme
         return [
             'primary' => '#3B82F6',
             'secondary' => '#1F2937',
+            'accent' => '#10B981',
         ];
     }
 }
@@ -61,8 +67,13 @@ class DefaultTheme extends BaseTheme
 
 ### 2. Create a Block
 
+```bash
+php artisan make:block Hero
+```
+
+This creates `app/Blocks/HeroBlock.php`:
+
 ```php
-// app/Blocks/HeroBlock.php
 namespace App\Blocks;
 
 use InertiaThemes\BaseBlock;
@@ -70,23 +81,21 @@ use InertiaThemes\BaseBlock;
 class HeroBlock extends BaseBlock
 {
     protected string $type = 'Hero';
-    protected string $name = 'Hero Section';
+    protected string $name = 'Hero';
     protected string $category = 'Content';
     protected string $component = 'Hero';
 
     public function contentSchema(): array
     {
         return [
-            'headline' => ['type' => 'text', 'label' => 'Headline'],
-            'subheadline' => ['type' => 'textarea', 'label' => 'Subheadline'],
+            'title' => ['type' => 'text', 'label' => 'Title'],
         ];
     }
 
     public function defaultContent(): array
     {
         return [
-            'headline' => 'Welcome',
-            'subheadline' => 'This is the subheadline',
+            'title' => '',
         ];
     }
 }
@@ -229,6 +238,33 @@ Components are resolved in this order:
 3. `themes/default/blocks/{BlockType}.vue`
 
 Use `_base` for shared components, theme folders for overrides.
+
+## Artisan Commands
+
+Generate themes and blocks using Artisan:
+
+```bash
+# Create a new theme
+php artisan make:theme ModernDark
+# Creates: app/Themes/ModernDarkTheme.php
+
+# Create a new block
+php artisan make:block Features
+# Creates: app/Blocks/FeaturesBlock.php
+```
+
+The commands automatically:
+- Add `Theme` or `Block` suffix if not present
+- Generate kebab-case IDs from class names
+- Create the directory if it doesn't exist
+
+To customize the stubs, publish them:
+
+```bash
+php artisan vendor:publish --tag=inertiathemes-stubs
+```
+
+Then edit the files in `stubs/inertiathemes/`.
 
 ## API Reference
 

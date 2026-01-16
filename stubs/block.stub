@@ -1,0 +1,37 @@
+<?php
+
+namespace {{ namespace }};
+
+use InertiaThemes\BaseBlock;
+
+class {{ class }} extends BaseBlock
+{
+    protected string $type = '{{ type }}';
+    protected string $name = '{{ name }}';
+    protected string $category = 'Content';
+    protected string $component = '{{ component }}';
+
+    public function contentSchema(): array
+    {
+        return [
+            'title' => ['type' => 'text', 'label' => 'Title'],
+        ];
+    }
+
+    public function defaultContent(): array
+    {
+        return [
+            'title' => '',
+        ];
+    }
+
+    public function settingsSchema(): array
+    {
+        return [];
+    }
+
+    public function defaultSettings(): array
+    {
+        return [];
+    }
+}

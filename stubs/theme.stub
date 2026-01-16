@@ -1,0 +1,34 @@
+<?php
+
+namespace {{ namespace }};
+
+use InertiaThemes\BaseTheme;
+
+class {{ class }} extends BaseTheme
+{
+    protected string $id = '{{ id }}';
+
+    public function name(): string
+    {
+        return '{{ name }}';
+    }
+
+    public function description(): string
+    {
+        return '';
+    }
+
+    public function colors(): array
+    {
+        return [
+            'primary' => '#3B82F6',
+            'secondary' => '#1F2937',
+            'accent' => '#10B981',
+        ];
+    }
+
+    public function defaultBlocks(): array
+    {
+        return [];
+    }
+}

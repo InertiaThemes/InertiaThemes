@@ -3,6 +3,8 @@
 namespace InertiaThemes;
 
 use Illuminate\Support\ServiceProvider;
+use InertiaThemes\Console\Commands\MakeBlock;
+use InertiaThemes\Console\Commands\MakeTheme;
 
 /**
  * InertiaThemes Service Provider
@@ -12,6 +14,10 @@ use Illuminate\Support\ServiceProvider;
  * Services registered:
  * - ThemeManager: Manages theme registration and resolution
  * - BlockRegistry: Manages block type registration
+ *
+ * Artisan commands:
+ * - `php artisan make:theme {name}` - Create a new theme class
+ * - `php artisan make:block {name}` - Create a new block class
  *
  * Publishable assets:
  * - Config: `php artisan vendor:publish --tag=inertiathemes-config`
@@ -78,6 +84,13 @@ class InertiaThemesServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                MakeTheme::class,
+                MakeBlock::class,
+            ]);
+        }
+
         $this->publishes([
             __DIR__ . '/../config/inertiathemes.php' => config_path('inertiathemes.php'),
         ], 'inertiathemes-config');
