@@ -1,0 +1,35 @@
+{
+    "name": "inertiathemes/inertiathemes",
+    "description": "A theming system for Laravel/Inertia applications with base blocks and theme overrides",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Matthew Gros",
+            "email": "hello@inertiathemes.com"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "illuminate/support": "^10.0|^11.0|^12.0",
+        "inertiajs/inertia-laravel": "^1.0|^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "InertiaThemes\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "InertiaThemes\\InertiaThemesServiceProvider"
+            ],
+            "aliases": {
+                "Theme": "InertiaThemes\\Facades\\Theme",
+                "Blocks": "InertiaThemes\\Facades\\Blocks"
+            }
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
