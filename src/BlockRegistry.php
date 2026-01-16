@@ -3,32 +3,52 @@
 namespace InertiaThemes;
 
 use Illuminate\Support\Collection;
+use InvalidArgumentException;
 use InertiaThemes\Contracts\Block;
 
+/**
+ * Block Registry
+ *
+ * Central registry for managing block types in InertiaThemes.
+ * Provides lazy loading of block instances for performance.
+ *
+ * Blocks are registered by class name and instantiated on-demand.
+ * Use the Blocks facade for convenient static access.
+ *
+ * @package InertiaThemes
+ */
 class BlockRegistry
 {
     /**
-     * Registered block classes (not instantiated)
+     * Registered block classes indexed by type.
+     *
+     * @var array<string, class-string<Block>>
      */
     protected array $registered = [];
 
     /**
-     * Instantiated block cache
+     * Instantiated block cache indexed by type.
+     *
+     * @var array<string, Block>
      */
     protected array $instances = [];
 
     /**
-     * Register a block class
+     * Register a block class.
+     *
+     * @param class-string<Block> $blockClass The fully qualified block class name
+     * @return $this
+     *
+     * @throws InvalidArgumentException If the class doesn't implement Block
      */
     public function register(string $blockClass): self
     {
         if (!is_subclass_of($blockClass, Block::class)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 "Block [{$blockClass}] must implement " . Block::class
             );
         }
 
-        // Get the type from a temporary instance
         $instance = new $blockClass();
         $this->registered[$instance->type()] = $blockClass;
         $this->instances[$instance->type()] = $instance;
@@ -37,7 +57,10 @@ class BlockRegistry
     }
 
     /**
-     * Register multiple block classes
+     * Register multiple block classes.
+     *
+     * @param array<int, class-string<Block>> $blockClasses Array of block class names
+     * @return $this
      */
     public function registerMany(array $blockClasses): self
     {
@@ -49,7 +72,10 @@ class BlockRegistry
     }
 
     /**
-     * Get a block by type
+     * Get a block by type.
+     *
+     * @param string $type The block type identifier
+     * @return Block|null The block instance, or null if not found
      */
     public function get(string $type): ?Block
     {
@@ -67,7 +93,9 @@ class BlockRegistry
     }
 
     /**
-     * Get all registered block types
+     * Get all registered block types.
+     *
+     * @return array<int, string> List of block type identifiers
      */
     public function types(): array
     {
@@ -75,11 +103,14 @@ class BlockRegistry
     }
 
     /**
-     * Get all blocks
+     * Get all block instances.
+     *
+     * Instantiates any blocks that haven't been loaded yet.
+     *
+     * @return Collection<string, Block>
      */
     public function all(): Collection
     {
-        // Ensure all are instantiated
         foreach ($this->registered as $type => $class) {
             if (!isset($this->instances[$type])) {
                 $this->instances[$type] = new $class();
@@ -90,15 +121,26 @@ class BlockRegistry
     }
 
     /**
-     * Get block list for UI (block picker)
+     * Get the block list for UI components.
+     *
+     * Returns an array suitable for block picker interfaces.
+     *
+     * @return array<int, array{type: string, name: string, category: string, ...}>
      */
     public function list(): array
     {
-        return $this->all()->map(fn (Block $block) => $block->toArray())->values()->all();
+        return $this->all()
+            ->map(fn (Block $block) => $block->toArray())
+            ->values()
+            ->all();
     }
 
     /**
-     * Get blocks grouped by category
+     * Get blocks grouped by category.
+     *
+     * Returns blocks organized by their category for hierarchical UIs.
+     *
+     * @return array<string, array<int, array>>
      */
     public function byCategory(): array
     {
@@ -109,7 +151,10 @@ class BlockRegistry
     }
 
     /**
-     * Check if a block type is registered
+     * Check if a block type is registered.
+     *
+     * @param string $type The block type identifier
+     * @return bool
      */
     public function has(string $type): bool
     {
@@ -117,7 +162,10 @@ class BlockRegistry
     }
 
     /**
-     * Get default content for a block type
+     * Get default content for a block type.
+     *
+     * @param string $type The block type identifier
+     * @return array<string, mixed> Default content, or empty array if block not found
      */
     public function defaultContent(string $type): array
     {
@@ -125,7 +173,10 @@ class BlockRegistry
     }
 
     /**
-     * Get component path for a block type
+     * Get the component path for a block type.
+     *
+     * @param string $type The block type identifier
+     * @return string|null Component path, or null if block not found
      */
     public function component(string $type): ?string
     {

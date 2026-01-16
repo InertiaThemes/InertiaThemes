@@ -3,42 +3,73 @@
 namespace InertiaThemes;
 
 use Illuminate\Support\Collection;
+use InvalidArgumentException;
 use InertiaThemes\Contracts\Theme;
 
+/**
+ * Theme Manager
+ *
+ * Central manager for theme registration and resolution in InertiaThemes.
+ * Implements lazy loading to only instantiate themes when needed.
+ *
+ * Themes are registered by class name and instantiated on-demand.
+ * Use the Theme facade for convenient static access.
+ *
+ * @package InertiaThemes
+ */
 class ThemeManager
 {
     /**
-     * Registered theme classes (not instantiated)
+     * Registered theme classes indexed by ID.
+     *
+     * @var array<string, class-string<Theme>>
      */
     protected array $registered = [];
 
     /**
-     * Instantiated theme cache
+     * Instantiated theme cache indexed by ID.
+     *
+     * @var array<string, Theme>
      */
     protected array $instances = [];
 
     /**
-     * Current theme ID
+     * The currently active theme ID.
+     *
+     * @var string|null
      */
     protected ?string $currentThemeId = null;
 
     /**
-     * Config array
+     * Configuration array from inertiathemes config.
+     *
+     * @var array<string, mixed>
      */
     protected array $config;
 
+    /**
+     * Create a new ThemeManager instance.
+     *
+     * @param array<string, mixed> $config Configuration from inertiathemes.php
+     */
     public function __construct(array $config)
     {
         $this->config = $config;
     }
 
     /**
-     * Register a theme class by ID
+     * Register a theme class with an explicit ID.
+     *
+     * @param string $id The theme identifier
+     * @param class-string<Theme> $themeClass The fully qualified theme class name
+     * @return $this
+     *
+     * @throws InvalidArgumentException If the class doesn't implement Theme
      */
     public function register(string $id, string $themeClass): self
     {
         if (!is_subclass_of($themeClass, Theme::class)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 "Theme [{$themeClass}] must implement " . Theme::class
             );
         }
@@ -49,17 +80,23 @@ class ThemeManager
     }
 
     /**
-     * Register a theme class (auto-discovers ID from class)
+     * Register a theme class, auto-discovering its ID.
+     *
+     * Instantiates the theme to retrieve its ID, then caches the instance.
+     *
+     * @param class-string<Theme> $themeClass The fully qualified theme class name
+     * @return $this
+     *
+     * @throws InvalidArgumentException If the class doesn't implement Theme
      */
     public function registerClass(string $themeClass): self
     {
         if (!is_subclass_of($themeClass, Theme::class)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 "Theme [{$themeClass}] must implement " . Theme::class
             );
         }
 
-        // Instantiate to get the ID
         $instance = new $themeClass();
         $id = $instance->id();
 
@@ -70,7 +107,12 @@ class ThemeManager
     }
 
     /**
-     * Set the current theme by ID (lazy loads only this theme)
+     * Set the current theme by ID.
+     *
+     * Falls back to the default theme if the requested ID is not registered.
+     *
+     * @param string $id The theme identifier
+     * @return $this
      */
     public function use(string $id): self
     {
@@ -79,29 +121,29 @@ class ThemeManager
         }
 
         $this->currentThemeId = $id;
-
-        // Lazy load only this theme
         $this->resolve($id);
 
         return $this;
     }
 
     /**
-     * Resolve/instantiate a single theme (lazy)
+     * Resolve and instantiate a single theme.
+     *
+     * Uses cached instance if available.
+     *
+     * @param string $id The theme identifier
+     * @return Theme|null The theme instance, or null if not registered
      */
     protected function resolve(string $id): ?Theme
     {
-        // Return cached instance if exists
         if (isset($this->instances[$id])) {
             return $this->instances[$id];
         }
 
-        // Check if registered
         if (!isset($this->registered[$id])) {
             return null;
         }
 
-        // Instantiate and cache
         $themeClass = $this->registered[$id];
         $this->instances[$id] = new $themeClass();
 
@@ -109,7 +151,11 @@ class ThemeManager
     }
 
     /**
-     * Get the current theme (only loads current theme)
+     * Get the current theme.
+     *
+     * Returns the active theme, falling back to the default if none is set.
+     *
+     * @return Theme|null The current theme, or null if none is available
      */
     public function current(): ?Theme
     {
@@ -123,7 +169,12 @@ class ThemeManager
     }
 
     /**
-     * Get a specific theme by ID (lazy loads only that theme)
+     * Get a specific theme by ID.
+     *
+     * Lazy loads only the requested theme.
+     *
+     * @param string $id The theme identifier
+     * @return Theme|null The theme instance, or null if not found
      */
     public function get(string $id): ?Theme
     {
@@ -131,7 +182,11 @@ class ThemeManager
     }
 
     /**
-     * Get all registered theme IDs (without loading them)
+     * Get all registered theme IDs.
+     *
+     * Does not instantiate themes.
+     *
+     * @return array<int, string> List of theme IDs
      */
     public function registered(): array
     {
@@ -139,8 +194,12 @@ class ThemeManager
     }
 
     /**
-     * Load ALL themes - use sparingly (e.g., admin theme picker)
-     * This is explicit so developers know they're loading everything
+     * Load all registered themes.
+     *
+     * Use sparingly as this instantiates all themes.
+     * Appropriate for admin/theme picker contexts.
+     *
+     * @return Collection<string, Theme>
      */
     public function loadAll(): Collection
     {
@@ -152,8 +211,12 @@ class ThemeManager
     }
 
     /**
-     * Get theme list for UI - loads all themes
-     * Only call this in admin/site builder contexts
+     * Get the theme list for UI components.
+     *
+     * Returns full theme data for theme picker interfaces.
+     * Loads all themes.
+     *
+     * @return array<int, array{id: string, name: string, description: string, colors: array, preview: string|null}>
      */
     public function list(): array
     {
@@ -167,7 +230,12 @@ class ThemeManager
     }
 
     /**
-     * Get minimal theme list (IDs and names only) - loads all themes
+     * Get a minimal theme list.
+     *
+     * Returns only IDs and names for lightweight dropdowns.
+     * Loads all themes.
+     *
+     * @return array<int, array{id: string, name: string}>
      */
     public function listMinimal(): array
     {
@@ -178,7 +246,13 @@ class ThemeManager
     }
 
     /**
-     * Resolve block content with current theme defaults
+     * Resolve block content with current theme defaults.
+     *
+     * Merges the provided content with the theme's default content for the block type.
+     *
+     * @param string $blockType The block type identifier
+     * @param array<string, mixed> $content User-provided content
+     * @return array<string, mixed> Merged content with theme defaults
      */
     public function resolveBlockContent(string $blockType, array $content = []): array
     {
@@ -192,7 +266,11 @@ class ThemeManager
     }
 
     /**
-     * Create page blocks from current theme defaults
+     * Create page blocks from current theme defaults.
+     *
+     * Generates block instances for a new page using the theme's default blocks.
+     *
+     * @return array<int, array{id: string, type: string, content: array, settings: array}>
      */
     public function createPageBlocks(): array
     {
@@ -204,7 +282,7 @@ class ThemeManager
 
         return collect($theme->defaultBlocks())->map(function ($blockType, $index) use ($theme) {
             return [
-                'id' => 'block-' . time() . '-' . $index . '-' . substr(md5(mt_rand()), 0, 9),
+                'id' => 'block-' . time() . '-' . $index . '-' . substr(md5((string) mt_rand()), 0, 9),
                 'type' => $blockType,
                 'content' => $theme->defaultContent($blockType),
                 'settings' => [],
@@ -213,7 +291,10 @@ class ThemeManager
     }
 
     /**
-     * Check if a theme is registered
+     * Check if a theme is registered.
+     *
+     * @param string $id The theme identifier
+     * @return bool
      */
     public function has(string $id): bool
     {
@@ -221,7 +302,11 @@ class ThemeManager
     }
 
     /**
-     * Get config value
+     * Get a configuration value.
+     *
+     * @param string $key Dot-notation config key
+     * @param mixed $default Default value if key doesn't exist
+     * @return mixed
      */
     public function config(string $key, mixed $default = null): mixed
     {
