@@ -2,6 +2,10 @@
 
 A theming system for Laravel/Inertia apps. Works with Vue, React, and Svelte.
 
+Visit our website at InertiaThemes.com for further information
+
+[![InertiaThemes](https://img.shields.io/badge/Go%20to-inertiathemes.com-2563EB?style=for-the-badge)](https://inertiathemes.com)
+
 ## Install
 
 ```bash
